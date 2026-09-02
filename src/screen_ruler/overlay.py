@@ -151,6 +151,25 @@ class OverlayWindow(QWidget):
         self._painting = True
         try:
             p = QPainter(self)
+            # Clear the backing store. WA_TranslucentBackground tells
+            # Qt not to fill the widget's background, so the backing
+            # store keeps the previous frame's pixels between paints;
+            # without an explicit clear, every paintEvent stacks its
+            # drawing on top of the prior frame, producing visible
+            # "ghosting" / drag trails.
+            #
+            # We use CompositionMode_Clear + transparent fillRect. We
+            # verified empirically (locally, on the QImage backing
+            # store) that:
+            #   - fillRect(QColor(0,0,0,0)) in default SourceOver
+            #     is dropped by the painter (old pixels stay)
+            #   - eraseRect() doesn't touch the backing-store bytes
+            #     regardless of setBackground
+            #   - only CompositionMode_Clear forces the destination
+            #     pixels to (0,0,0,0) regardless of the source colour
+            p.setCompositionMode(QPainter.CompositionMode_Clear)
+            p.fillRect(self.rect(), Qt.transparent)
+            p.setCompositionMode(QPainter.CompositionMode_SourceOver)
             # Deliberately no background fill: WA_TranslucentBackground + per-element
             # drawing is what makes the overlay truly see-through. If a particular
             # compositor refuses to alpha-blend an empty surface, switch to
