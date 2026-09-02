@@ -70,6 +70,7 @@ class OverlayWindow(QWidget):
         # Drag state
         self._drag_handle = Handle.NONE
         self._drag_last: Optional[Vec] = None
+        self._painting = False  # paintEvent reentrancy guard
 
         # Cursor poll
         self._timer = QTimer(self)
@@ -138,39 +139,52 @@ class OverlayWindow(QWidget):
     # ---- painting ----
 
     def paintEvent(self, event):  # type: ignore[override]
-        p = QPainter(self)
-        # Deliberately no background fill: WA_TranslucentBackground + per-element
-        # drawing is what makes the overlay truly see-through. If a particular
-        # compositor refuses to alpha-blend an empty surface, switch to
-        # `p.fillRect(self.rect(), QColor(0, 0, 0, 1))` here (alpha=1 hack).
-        if self._mode == "ruler":
-            center = self._ruler.center()
-            # mapToGlobal only accepts QPoint in PyQt5, not QPointF.
-            global_pt = self.mapToGlobal(QPoint(int(center.x), int(center.y)))
-            dip_per_cm = platform_x11.dip_per_cm_at(
-                global_pt.x(), global_pt.y()
-            )
-            self._ruler.draw(p, dip_per_cm)
-            length = self._ruler.length()
-            if dip_per_cm > 0:
-                cm = length / dip_per_cm
-                value = f"{cm:.2f} cm  ({int(length)} px)"
+        # Reentrancy guard. Without this, a nested paintEvent — which
+        # Qt can trigger from inside a paint op (QPainterPath updates,
+        # backing-store invalidation) — creates a second QPainter(self)
+        # on the same paint device, producing the "A paint device can
+        # only be painted by one painter at a time" /
+        # "QBackingStore::endPaint() called with active painter" error
+        # cascade. Dropping the re-entered call costs at most one frame.
+        if self._painting:
+            return
+        self._painting = True
+        try:
+            p = QPainter(self)
+            # Deliberately no background fill: WA_TranslucentBackground + per-element
+            # drawing is what makes the overlay truly see-through. If a particular
+            # compositor refuses to alpha-blend an empty surface, switch to
+            # `p.fillRect(self.rect(), QColor(0, 0, 0, 1))` here (alpha=1 hack).
+            if self._mode == "ruler":
+                center = self._ruler.center()
+                # mapToGlobal only accepts QPoint in PyQt5, not QPointF.
+                global_pt = self.mapToGlobal(QPoint(int(center.x), int(center.y)))
+                dip_per_cm = platform_x11.dip_per_cm_at(
+                    global_pt.x(), global_pt.y()
+                )
+                self._ruler.draw(p, dip_per_cm)
+                length = self._ruler.length()
+                if dip_per_cm > 0:
+                    cm = length / dip_per_cm
+                    value = f"{cm:.2f} cm  ({int(length)} px)"
+                else:
+                    value = f"{int(length)} px"
+                self._draw_readout(p, center, value, COL_BLUE,
+                                   "拖动尺身移动 · 拖动端点缩放/旋转")
             else:
-                value = f"{int(length)} px"
-            self._draw_readout(p, center, value, COL_BLUE,
-                               "拖动尺身移动 · 拖动端点缩放/旋转")
-        else:
-            self._protractor.draw(p, "")
-            angle = self._protractor.angle_deg()
-            # 0° and "angle undefined" must look different on screen.
-            # The protractor returns None when one arm has zero length;
-            # in that case the geometry can't define an angle and we
-            # refuse to lie with "0.0°".
-            value = f"{angle:.1f}°" if angle is not None else "--°"
-            self._draw_readout(p, self._protractor.vertex, value,
-                               COL_ORANGE,
-                               "拖动橙色点移动 · 拖动蓝色点旋转")
-        p.end()
+                self._protractor.draw(p, "")
+                angle = self._protractor.angle_deg()
+                # 0° and "angle undefined" must look different on screen.
+                # The protractor returns None when one arm has zero length;
+                # in that case the geometry can't define an angle and we
+                # refuse to lie with "0.0°".
+                value = f"{angle:.1f}°" if angle is not None else "--°"
+                self._draw_readout(p, self._protractor.vertex, value,
+                                   COL_ORANGE,
+                                   "拖动橙色点移动 · 拖动蓝色点旋转")
+            p.end()
+        finally:
+            self._painting = False
 
     def _draw_readout(self, p: QPainter, anchor: Vec, value: str,
                       border: QColor, hint: str) -> None:
