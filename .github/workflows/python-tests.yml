@@ -1,0 +1,31 @@
+name: Python tests
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pyqt5 \
+            python3-xlib \
+            libxfixes-dev \
+            libxrandr \
+            xrandr \
+            xvfb
+
+      - name: Unit tests (no display required)
+        run: python3 -m unittest test_geometry test_state -v
+
+      - name: Smoke test (Xvfb)
+        run: xvfb-run -a python3 smoke_test.py
