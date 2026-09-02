@@ -131,6 +131,33 @@ class SmokeTest(unittest.TestCase):
         w.hide()
         w.close()
 
+    def test_overlay_paint_translucent_background_ab(self):
+        """Exercise both backing-store paths through show/resize/update/close.
+
+        Qt emits QPainter/QBackingStore diagnostics to stderr rather than as
+        Python exceptions. CI captures that stream and rejects the lifecycle
+        diagnostics, so this test includes the high-risk window transitions.
+        """
+        from PyQt5.QtCore import Qt
+        from screen_ruler import state
+        from screen_ruler.overlay import OverlayWindow
+
+        for translucent in (True, False):
+            with self.subTest(translucent=translucent):
+                w = OverlayWindow(state.OverlayState())
+                w.setAttribute(Qt.WA_TranslucentBackground, translucent)
+                w.show()
+                for width, height in ((640, 480), (800, 600), (480, 640)):
+                    w.resize(width, height)
+                    w.update()
+                    self._app.processEvents()
+                    w.toggle_mode()
+                    self._app.processEvents()
+                w.hide()
+                w.close()
+                w.deleteLater()
+                self._app.processEvents()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -149,6 +149,7 @@ class OverlayWindow(QWidget):
         if self._painting:
             return
         self._painting = True
+        p: Optional[QPainter] = None
         try:
             p = QPainter(self)
             # Clear the backing store. WA_TranslucentBackground tells
@@ -201,8 +202,12 @@ class OverlayWindow(QWidget):
                 self._draw_readout(p, self._protractor.vertex, value,
                                    COL_ORANGE,
                                    "拖动橙色点移动 · 拖动蓝色点旋转")
-            p.end()
         finally:
+            # Do not rely on Python object destruction: if a drawing helper
+            # raises, Qt must still release this widget's paint device before
+            # QBackingStore ends the paint cycle.
+            if p is not None and p.isActive():
+                p.end()
             self._painting = False
 
     def _draw_readout(self, p: QPainter, anchor: Vec, value: str,

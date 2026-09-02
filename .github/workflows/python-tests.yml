@@ -28,4 +28,12 @@ jobs:
         run: python3 -m unittest discover -t . -s tests -p "test_*.py" -v
 
       - name: Smoke test (Xvfb)
-        run: xvfb-run -a python3 -m unittest discover -t . -s tests -p "smoke_test.py" -v
+        run: |
+          stderr_log="$(mktemp)"
+          trap 'rm -f "$stderr_log"' EXIT
+          xvfb-run -a python3 -m unittest discover -t . -s tests -p "smoke_test.py" -v 2>"$stderr_log"
+          cat "$stderr_log"
+          if grep -Eq 'QPainter::|QBackingStore::endPaint\(\) called with active painter|QPaintDevice: Cannot destroy paint device that is being painted' "$stderr_log"; then
+            echo 'Qt paint-lifecycle diagnostic detected' >&2
+            exit 1
+          fi
