@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **2026-09-02**: Restructured into a proper `src/screen_ruler/` package
+  with a `tests/` directory. Internal imports updated, CI workflow
+  switched to `unittest discover -s tests`. No behaviour change.
+
 Initial release as a standalone project, extracted from
 [`kingsimba/screen-ruler-protractor`](https://github.com/kingsimba/screen-ruler-protractor)'s
 `linux/` subdirectory.

@@ -12,7 +12,7 @@ from typing import List, Optional
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen, QBrush
 
-from geometry import Vec, angle_between, cross
+from screen_ruler.geometry import Vec, angle_between, cross
 
 
 class Handle(Enum):

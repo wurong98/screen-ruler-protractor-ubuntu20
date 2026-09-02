@@ -19,24 +19,28 @@ state persistence.
 
 ```
 .
-├── geometry.py       pure-Python math (Vec, angle, point_in_polygon, hysteresis)
-├── state.py          XDG config + atomic JSON save (file format compatible with WPF)
-├── platform_x11.py   the only module that touches X11: cursor + XFixes input shape
-│                     + monitor/DPI lookup (Qt primary, xrandr fallback)
-├── protractor.py     protractor tool: state + QPainter drawing (no Xlib)
-├── ruler.py          ruler tool: state + QPainter drawing + hysteresis (no Xlib)
-├── overlay.py        main QWidget: fullscreen transparent window, hit-test polling,
-│                     drag handling, click-through toggle (calls platform_x11)
-├── tray.py           QSystemTrayIcon with a 32×32 runtime-painted protractor glyph
-├── main.py           QApplication entry point
+├── main.py                 QApplication entry point (thin launcher)
 │
-├── test_geometry.py  unit tests (no display required)
-├── test_state.py     unit tests (no display required)
-├── smoke_test.py     full-stack paint test (needs Xvfb)
-├── .github/workflows/ CI (ubuntu-20.04 + xvfb)
+├── src/screen_ruler/       the package — only place that holds implementation
+│   ├── geometry.py         pure-Python math (Vec, angle, point_in_polygon, hysteresis)
+│   ├── state.py            XDG config + atomic JSON save (file format compatible with WPF)
+│   ├── platform_x11.py     the only module that touches X11: cursor + XFixes input shape
+│   │                       + monitor/DPI lookup (Qt primary, xrandr fallback)
+│   ├── protractor.py       protractor tool: state + QPainter drawing (no Xlib)
+│   ├── ruler.py            ruler tool: state + QPainter drawing + hysteresis (no Xlib)
+│   ├── overlay.py          main QWidget: fullscreen transparent window, hit-test polling,
+│   │                       drag handling, click-through toggle (calls platform_x11)
+│   └── tray.py             QSystemTrayIcon with a 32×32 runtime-painted protractor glyph
+│
+├── tests/                  unittest suite
+│   ├── test_geometry.py    unit tests (no display required)
+│   ├── test_state.py       unit tests (no display required)
+│   └── smoke_test.py       full-stack paint test (needs Xvfb)
+│
+├── .github/workflows/      CI (ubuntu-20.04 + xvfb)
 ├── README.md
 ├── CHANGELOG.md
-├── LICENSE           MIT
+├── LICENSE                 MIT
 └── .gitignore
 ```
 
@@ -70,7 +74,7 @@ python3 -c "import PyQt5.QtWidgets, Xlib; print('OK')"
 ## Run
 
 ```bash
-cd linux
+# from the repo root
 python3 main.py
 ```
 
@@ -96,12 +100,16 @@ so the two ports can share a state file if mounted cross-platform.
 
 ```bash
 # Unit tests — no display required
-cd linux
-python3 -m unittest test_geometry test_state
+python3 -m unittest discover -t . -s tests -p "test_*.py" -v
 
 # Smoke test — needs an X server, use Xvfb
-xvfb-run -a python3 smoke_test.py
+xvfb-run -a python3 -m unittest discover -t . -s tests -p "smoke_test.py" -v
 ```
+
+The `-t .` (top-level dir) flag is what makes the in-repo
+`src/screen_ruler` package importable from the test files without an
+editable install. `main.py` and `tests/__init__.py` add the same path
+when invoked directly.
 
 The smoke test:
 1. Imports every module (catches `ImportError`s from X11 path).

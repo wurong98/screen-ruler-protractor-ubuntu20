@@ -25,7 +25,7 @@ jobs:
             xvfb
 
       - name: Unit tests (no display required)
-        run: python3 -m unittest test_geometry test_state -v
+        run: python3 -m unittest discover -t . -s tests -p "test_*.py" -v
 
       - name: Smoke test (Xvfb)
-        run: xvfb-run -a python3 smoke_test.py
+        run: xvfb-run -a python3 -m unittest discover -t . -s tests -p "smoke_test.py" -v

@@ -6,7 +6,7 @@ Run:
 import math
 import unittest
 
-from geometry import Vec, angle_between, cross, near, point_in_polygon
+from screen_ruler.geometry import Vec, angle_between, cross, near, point_in_polygon
 
 
 class VecTests(unittest.TestCase):

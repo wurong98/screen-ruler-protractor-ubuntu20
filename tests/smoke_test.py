@@ -1,9 +1,9 @@
 """Smoke test for the full overlay stack.
 
 Unlike `python3 -m unittest` runs, this needs an X server (python-xlib
-opens a Display on import). Run under xvfb:
+opens a Display on import). Run under xvfb from the repo root:
 
-    cd linux && xvfb-run -a python3 smoke_test.py
+    xvfb-run -a python3 tests/smoke_test.py
 
 What it checks:
   * All modules import without error.
@@ -18,16 +18,13 @@ IMPORTANT: This test writes to a *temporary* XDG_CONFIG_HOME so it
 never clobbers the user's real state file at
 ~/.config/screen-protractor/state.json.
 """
+# `tests/__init__.py` already adds `src/` to sys.path so `screen_ruler`
+# is importable when this file is run directly.
 import os
 import sys
 import tempfile
 import unittest
 from unittest import mock
-
-# Add the linux/ dir to sys.path so we can `import overlay`, `import state`, ...
-HERE = os.path.dirname(os.path.abspath(__file__))
-if HERE not in sys.path:
-    sys.path.insert(0, HERE)
 
 
 class SmokeTest(unittest.TestCase):
@@ -49,16 +46,16 @@ class SmokeTest(unittest.TestCase):
         shutil.rmtree(self._tmp_cfg, ignore_errors=True)
 
     def test_imports(self):
-        import geometry   # noqa: F401
-        import state      # noqa: F401
-        import platform_x11  # noqa: F401
-        import protractor    # noqa: F401
-        import ruler         # noqa: F401
-        import overlay       # noqa: F401
-        import tray          # noqa: F401
+        from screen_ruler import geometry   # noqa: F401
+        from screen_ruler import state      # noqa: F401
+        from screen_ruler import platform_x11  # noqa: F401
+        from screen_ruler import protractor    # noqa: F401
+        from screen_ruler import ruler         # noqa: F401
+        from screen_ruler import overlay       # noqa: F401
+        from screen_ruler import tray          # noqa: F401
 
     def test_state_roundtrip(self):
-        import state
+        from screen_ruler import state
         s = state.OverlayState(mode="ruler",
                                protractor=[1, 2, 3, 4, 5, 6],
                                ruler=[10, 20, 30, 40])
@@ -74,8 +71,8 @@ class SmokeTest(unittest.TestCase):
         # The user caught this as a UX bug because "0°" and "undefined
         # angle" are different things — see geometry.MIN_LENGTH.
         from PyQt5.QtWidgets import QApplication
-        from protractor import Protractor
-        from geometry import Vec
+        from screen_ruler.protractor import Protractor
+        from screen_ruler.geometry import Vec
         p = Protractor(Vec(400, 300))
         p.end1 = p.vertex  # mathematically degenerate
         p.end2 = Vec(700, 200)
@@ -92,8 +89,8 @@ class SmokeTest(unittest.TestCase):
     def test_overlay_paint(self):
         from PyQt5.QtCore import Qt
         from PyQt5.QtGui import QImage, QPixmap
-        import state
-        from overlay import OverlayWindow
+        from screen_ruler import state
+        from screen_ruler.overlay import OverlayWindow
 
         s = state.OverlayState()
         w = OverlayWindow(s)

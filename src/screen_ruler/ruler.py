@@ -12,8 +12,8 @@ from typing import List
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPolygonF
 
-from geometry import Vec, near, point_in_polygon
-from protractor import COL_BLUE, COL_ORANGE, Handle
+from screen_ruler.geometry import Vec, near, point_in_polygon
+from screen_ruler.protractor import COL_BLUE, COL_BLUE_HALO, COL_ORANGE, Handle
 
 
 class Ruler:
@@ -236,7 +236,6 @@ class Ruler:
         # marker (no body handle in the WPF design).
         outer_r = 14.0 if big else 11.0
         inner_r = 8.0 if big else 6.0
-        from protractor import COL_BLUE_HALO
         halo = QColor(COL_BLUE_HALO)
         halo.setAlpha(0x55)
         p.setPen(Qt.NoPen)

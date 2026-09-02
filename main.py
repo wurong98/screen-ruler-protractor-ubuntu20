@@ -1,21 +1,29 @@
 """Entry point for the Linux port of the screen protractor / ruler.
 
-Run:
-    python3 linux/main.py
+Run from the repo root:
+    python3 main.py
 
 The app keeps running when the overlay is hidden (the tray icon stays
 alive). To exit fully, use the tray menu or the overlay context menu.
 """
 from __future__ import annotations
 
+import os
 import sys
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication
+# Make the in-repo `screen_ruler` package importable when this file is
+# run directly, without requiring an editable install (`pip install -e .`).
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_SRC = os.path.join(_HERE, "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
 
-import state as state_mod
-from overlay import OverlayWindow
-from tray import Tray
+from PyQt5.QtCore import Qt  # noqa: E402
+from PyQt5.QtWidgets import QApplication  # noqa: E402
+
+from screen_ruler import state as state_mod  # noqa: E402
+from screen_ruler.overlay import OverlayWindow  # noqa: E402
+from screen_ruler.tray import Tray  # noqa: E402
 
 
 def main() -> int:

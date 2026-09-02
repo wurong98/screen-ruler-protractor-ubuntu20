@@ -1,7 +1,9 @@
 """Unit tests for state.py.
 
-Run:
-    cd linux && python3 -m unittest test_state
+Run from the repo root:
+    python3 -m unittest tests.test_state
+or
+    python3 -m unittest discover -s tests -p "test_*.py"
 """
 import json
 import os
@@ -9,7 +11,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-import state
+from screen_ruler import state
 
 
 class StateTests(unittest.TestCase):

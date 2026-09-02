@@ -19,11 +19,11 @@ from PyQt5.QtCore import QPoint, QPointF, QRectF, Qt, QTimer
 from PyQt5.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QBrush
 from PyQt5.QtWidgets import QApplication, QMenu, QWidget
 
-import platform_x11
-import state as state_mod
-from geometry import Vec
-from protractor import COL_BLUE, COL_ORANGE, Handle, Protractor
-from ruler import Ruler
+from screen_ruler import platform_x11
+from screen_ruler import state as state_mod
+from screen_ruler.geometry import Vec
+from screen_ruler.protractor import COL_BLUE, COL_ORANGE, Handle, Protractor
+from screen_ruler.ruler import Ruler
 
 
 # Hit-test radius in logical pixels. The WPF version uses 18 DIPs; we
