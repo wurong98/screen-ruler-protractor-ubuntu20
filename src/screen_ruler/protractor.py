@@ -12,7 +12,7 @@ from typing import List, Optional
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen, QBrush
 
-from screen_ruler.geometry import Vec, angle_between, cross
+from screen_ruler.geometry import Vec, angle_between, cross, near
 
 
 class Handle(Enum):
@@ -78,7 +78,6 @@ class Protractor:
         # dispatches the ruler's own move() first.
 
     def hit_test(self, pt: Vec, radius: float) -> Handle:
-        from geometry import near
         if near(pt, self.vertex, radius):
             return Handle.VERTEX
         if near(pt, self.end1, radius):
@@ -154,7 +153,11 @@ class Protractor:
         p2 = self.vertex + v2 * self.ARC_RADIUS
         # Screen y-down: positive cross ⇒ v1→v2 sweep is clockwise.
         sweep_clockwise = cross(v1, v2) >= 0
-        start_angle = math.degrees(math.atan2(v1.y, v1.x))
+        # atan2 returns the math angle (CCW from +x); in a y-down screen
+        # that lands in the *opposite* visual quadrant from PyQt5's
+        # arcTo, which measures CCW from +x in screen orientation
+        # (so CCW from +x in y-down is visually CW). Negate to align.
+        start_angle = -math.degrees(math.atan2(v1.y, v1.x))
 
         from PyQt5.QtGui import QPainterPath
         path = QPainterPath()

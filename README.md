@@ -1,5 +1,7 @@
 # 屏幕量角器 / 尺子 — Linux 移植版
 
+![尺子模式截图](docs/screenshot-ruler.png)
+
 > **Forked from:** [kingsimba/screen-ruler-protractor](https://github.com/kingsimba/screen-ruler-protractor)
 > （原版是 WPF / .NET 6 的 Windows 版本 — 见 [上游 README](https://github.com/kingsimba/screen-ruler-protractor#readme) 和 [上游 workflow](https://github.com/kingsimba/screen-ruler-protractor/blob/master/.github/workflows/dotnet-desktop.yml)）
 >
