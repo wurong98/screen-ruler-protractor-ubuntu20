@@ -1,149 +1,120 @@
-# Screen Protractor / Ruler — Linux port
+# 屏幕量角器 / 尺子 — Linux 移植版
 
 > **Forked from:** [kingsimba/screen-ruler-protractor](https://github.com/kingsimba/screen-ruler-protractor)
-> (original WPF / .NET 6 Windows version — see [upstream README](https://github.com/kingsimba/screen-ruler-protractor#readme) and [upstream workflow](https://github.com/kingsimba/screen-ruler-protractor/blob/master/.github/workflows/dotnet-desktop.yml))
+> （原版是 WPF / .NET 6 的 Windows 版本 — 见 [上游 README](https://github.com/kingsimba/screen-ruler-protractor#readme) 和 [上游 workflow](https://github.com/kingsimba/screen-ruler-protractor/blob/master/.github/workflows/dotnet-desktop.yml)）
 >
-> This project is a **PyQt5 + X11 port** targeting **Ubuntu 20.04**.
-> Code is not shared with the WPF build — same feature surface, different stack.
-> State file format is compatible with the Windows version so a single
-> `state.json` can drive both ports if mounted cross-platform.
+> 本项目是面向 **Ubuntu 20.04** 的 **PyQt5 + X11 移植版**。
+> 与 WPF 版本不共享代码 — 功能相同，技术栈不同。
+> 状态文件格式与 Windows 版兼容，跨平台挂载同一个 `state.json` 即可让两个版本共用。
 
-PyQt5 + X11 port of the WPF screen protractor & ruler for **Ubuntu 20.04 (X11)**.
+WPF 版屏幕量角器 / 尺子的 PyQt5 + X11 移植，目标平台 **Ubuntu 20.04 (X11)**。
 
-Functionally equivalent to the Windows version: transparent fullscreen
-overlay, click-through that only activates on control points, protractor
-with two rays and an angle arc, ruler with mm/cm ticks, system-tray icon,
-state persistence.
+功能上与 Windows 版等价：透明全屏覆盖层、仅在控制点处接受点击的穿透逻辑、带两条射线和角度弧的量角器、带 mm/cm 刻度的尺子、系统托盘图标、状态持久化。
 
-## Architecture
+## 架构
 
 ```
 .
-├── main.py                 QApplication entry point (thin launcher)
+├── main.py                 QApplication 入口（薄启动器）
 │
-├── src/screen_ruler/       the package — only place that holds implementation
-│   ├── geometry.py         pure-Python math (Vec, angle, point_in_polygon, hysteresis)
-│   ├── state.py            XDG config + atomic JSON save (file format compatible with WPF)
-│   ├── platform_x11.py     the only module that touches X11: cursor + XFixes input shape
-│   │                       + monitor/DPI lookup (Qt primary, xrandr fallback)
-│   ├── protractor.py       protractor tool: state + QPainter drawing (no Xlib)
-│   ├── ruler.py            ruler tool: state + QPainter drawing + hysteresis (no Xlib)
-│   ├── overlay.py          main QWidget: fullscreen transparent window, hit-test polling,
-│   │                       drag handling, click-through toggle (calls platform_x11)
-│   └── tray.py             QSystemTrayIcon with a 32×32 runtime-painted protractor glyph
+├── src/screen_ruler/       包本体 — 唯一存放实现的位置
+│   ├── geometry.py         纯 Python 数学（Vec、angle、point_in_polygon、hysteresis）
+│   ├── state.py            XDG 配置 + 原子写入的 JSON（文件格式与 WPF 版兼容）
+│   ├── platform_x11.py     唯一接触 X11 的模块：光标 + XFixes input shape
+│   │                       + 显示器 / DPI 查询（Qt 优先，xrandr 兜底）
+│   ├── protractor.py       量角器：状态 + QPainter 绘制（不碰 Xlib）
+│   ├── ruler.py            尺子：状态 + QPainter 绘制 + hysteresis（不碰 Xlib）
+│   ├── overlay.py          主 QWidget：全屏透明窗口、命中测试轮询、
+│   │                       拖拽处理、点击穿透切换（调用 platform_x11）
+│   └── tray.py             QSystemTrayIcon，运行时绘制 32×32 量角器图标
 │
-├── tests/                  unittest suite
-│   ├── test_geometry.py    unit tests (no display required)
-│   ├── test_state.py       unit tests (no display required)
-│   └── smoke_test.py       full-stack paint test (needs Xvfb)
+├── tests/                  unittest 测试集
+│   ├── test_geometry.py    单元测试（无需显示器）
+│   ├── test_state.py       单元测试（无需显示器）
+│   └── smoke_test.py       全栈绘制测试（需要 Xvfb）
 │
-├── .github/workflows/      CI (ubuntu-20.04 + xvfb)
+├── .github/workflows/      CI（ubuntu-20.04 + xvfb）
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE                 MIT
 └── .gitignore
 ```
 
-Strict layering: `ruler` and `protractor` only import `geometry`. They
-never touch X11, so the door is open to a `platform_wayland.py` swap that
-keeps the same public surface (`cursor_pos`, `set_input_passthrough`,
-`virtual_screen_geom`, `dip_per_cm_at`).
+分层严格：`ruler` 和 `protractor` 只 import `geometry`，完全不碰 X11。这就为将来替换成 `platform_wayland.py` 留好了门 — 只需保持同样的公共接口（`cursor_pos`、`set_input_passthrough`、`virtual_screen_geom`、`dip_per_cm_at`）。
 
-## Requirements
+## 依赖
 
-Ubuntu 20.04 ships everything needed:
+Ubuntu 20.04 自带所有依赖：
 
-| Package                | Version on 20.04 | Notes                                 |
-|------------------------|------------------|---------------------------------------|
-| `python3`              | 3.8.10           | system Python                         |
-| `python3-pyqt5`        | 5.14.1           | Qt 5 widgets + QPainter               |
-| `python3-xlib`         | 0.33             | X11 protocol, used only for cursor    |
-| `libxfixes-dev`        | 1:5.0.3-2        | XFixes input shape (click-through)    |
-| `libxrandr`            | 1.5.2            | monitor geometry fallback             |
-| `xrandr`               | any              | CLI tool used as DPI fallback         |
-| `xvfb`                 | 2:1.20.13        | only needed for the smoke test        |
+| 包                       | 20.04 上的版本 | 说明                                       |
+|--------------------------|----------------|--------------------------------------------|
+| `python3`                | 3.8.10         | 系统 Python                                |
+| `python3-pyqt5`          | 5.14.1         | Qt 5 widgets + QPainter                    |
+| `python3-xlib`           | 0.33           | X11 协议，只用于读取光标位置               |
+| `libxfixes-dev`          | 1:5.0.3-2      | XFixes input shape（点击穿透）             |
+| `libxrandr`              | 1.5.2          | 显示器几何信息的兜底                       |
+| `xrandr`                 | 任意           | DPI 兜底用的 CLI                           |
+| `xvfb`                   | 2:1.20.13      | 仅 smoke test 需要                         |
 
-**No `pip install` is required.** All of the above are pre-installed on
-a typical Ubuntu 20.04 desktop with `python3-pyqt5` available; verify
-with:
+**不需要 `pip install` 任何东西。** 上述所有包在装了 `python3-pyqt5` 的标准 Ubuntu 20.04 桌面上都已预装。验证一下：
 
 ```bash
 python3 -c "import PyQt5.QtWidgets, Xlib; print('OK')"
 ```
 
-## Run
+## 运行
 
 ```bash
-# from the repo root
+# 从仓库根目录运行
 python3 main.py
 ```
 
-The overlay appears fullscreen, the tray icon shows up in the system
-tray, and the overlay is click-through by default. Move the cursor near
-a control point (the orange/blue circles) and the overlay starts
-accepting input so you can drag.
+覆盖层会全屏显示，托盘图标出现在系统托盘区，默认是点击穿透的。把鼠标移到控制点（橙 / 蓝圆点）附近，覆盖层就会开始接受输入，可以拖动。
 
-Right-click any handle for the context menu, or double-click the tray
-icon to show/hide the overlay.
+右键任一控制点可弹出上下文菜单，双击托盘图标可显示 / 隐藏覆盖层。
 
-## State
+## 状态文件
 
 ```text
 $XDG_CONFIG_HOME/screen-protractor/state.json
-   (default: ~/.config/screen-protractor/state.json)
+   （默认：~/.config/screen-protractor/state.json）
 ```
 
-Schema matches the WPF version's `%AppData%\ScreenProtractor\state.json`
-so the two ports can share a state file if mounted cross-platform.
+字段定义与 WPF 版的 `%AppData%\ScreenProtractor\state.json` 一致，跨平台挂载同一份文件即可让两个版本共用状态。
 
-## Tests
+## 测试
 
 ```bash
-# Unit tests — no display required
+# 单元测试 — 不需要显示器
 python3 -m unittest discover -t . -s tests -p "test_*.py" -v
 
-# Smoke test — needs an X server, use Xvfb
+# 烟雾测试 — 需要 X server，用 Xvfb
 xvfb-run -a python3 -m unittest discover -t . -s tests -p "smoke_test.py" -v
 ```
 
-The `-t .` (top-level dir) flag is what makes the in-repo
-`src/screen_ruler` package importable from the test files without an
-editable install. `main.py` and `tests/__init__.py` add the same path
-when invoked directly.
+`-t .`（top-level dir）这个参数让仓库内的 `src/screen_ruler` 包在测试里直接可 import，不需要 `pip install -e .`。`main.py` 和 `tests/__init__.py` 在被直接调用时也会做同样的事。
 
-The smoke test:
-1. Imports every module (catches `ImportError`s from X11 path).
-2. Roundtrips `state.save` → `state.load`.
-3. Constructs `OverlayWindow`, resizes, shows, and `render()`s into a
-   `QPixmap`. Asserts the protractor drawing produces opaque pixels and
-   the ruler drawing (after `toggle_mode()`) does too.
+烟雾测试覆盖：
+1. 导入所有模块（捕获 X11 路径上的 `ImportError`）
+2. `state.save` → `state.load` 的往返
+3. 构造 `OverlayWindow`，resize / show 后 `render()` 到 `QPixmap`。断言量角器绘制有非透明像素，切到尺子模式后也有
 
-## Known limitations vs. the WPF version
+## 与 WPF 版相比的已知限制
 
-- **Physical-cm calibration on cheap monitors.** If `xrandr` reports
-  `0mm × 0mm` (panels without proper EDID), the ruler falls back to
-  pixel mode. The WPF version uses `GetDpiForMonitor(MDT_RAW_DPI)` which
-  is a closer reading of the panel's true density; the two numbers may
-  differ by a few percent on those monitors.
-- **Click-through edge cases.** Some X11 compositors (mutter, KWin in
-  certain focus modes) re-translate the input shape on window move; we
-  use client-relative rectangles to minimise this, but if you see the
-  overlay suddenly grab clicks after a fast drag, that is the cause.
-- **Tray icon on GNOME.** GNOME does not show StatusNotifierItem icons
-  without the `appindicator` extension installed
-  (`sudo apt install gnome-shell-extension-appindicator`).
-- **Transparency on X11.** We rely on `WA_TranslucentBackground` with no
-  background fill. If a particular compositor refuses to alpha-blend an
-  empty surface, switch the commented line in `overlay.paintEvent` to
-  `p.fillRect(self.rect(), QColor(0, 0, 0, 1))` (the 1-alpha hack from
-  the WPF version).
+- **廉价显示器的物理厘米标定。** 如果 `xrandr` 报 `0mm × 0mm`（EDID 缺失的面板），尺子会回退到像素模式。WPF 版用 `GetDpiForMonitor(MDT_RAW_DPI)` 拿到的值更接近面板真实密度，这两种读数在低端显示器上可能差几个百分点。
+- **点击穿透的边界情况。** 部分 X11 合成器（mutter、某些对焦模式下的 KWin）在窗口移动时会重新转换 input shape；我们用客户端相对矩形来尽量规避，但如果你在快速拖拽后看到覆盖层突然开始抢点击，就是这个原因。
+- **GNOME 上的托盘图标。** GNOME 不装 `appindicator` 扩展就不显示 StatusNotifierItem 图标：
+  ```bash
+  sudo apt install gnome-shell-extension-appindicator
+  ```
+- **X11 透明。** 我们靠 `WA_TranslucentBackground` 不画背景实现透明。如果某个合成器拒绝对空 surface 做 alpha 混合，把 `overlay.paintEvent` 里那行注释打开，改成 `p.fillRect(self.rect(), QColor(0, 0, 0, 1))`（WPF 版用的 1-alpha 技巧）。
 
-## Troubleshooting
+## 故障排查
 
-| Symptom                                  | Likely cause                              |
-|------------------------------------------|-------------------------------------------|
-| `libXfixes.so.3: cannot open shared object file` | missing `libxfixes-dev`                |
-| `qt.qpa.xcb: could not connect to display`       | run under `xvfb-run` (or a real display) |
-| Tray icon invisible on GNOME                    | install `gnome-shell-extension-appindicator` |
-| `import Xlib` fails                             | `sudo apt install python3-xlib`           |
-| Ruler shows "px" instead of "cm"                | monitor EDID missing; install or update it |
+| 现象                                       | 可能原因                                  |
+|--------------------------------------------|-------------------------------------------|
+| `libXfixes.so.3: cannot open shared object file` | 缺 `libxfixes-dev`                       |
+| `qt.qpa.xcb: could not connect to display`       | 用 `xvfb-run` 跑（或接到真实显示器）     |
+| GNOME 上看不到托盘图标                          | 装 `gnome-shell-extension-appindicator`  |
+| `import Xlib` 失败                              | `sudo apt install python3-xlib`          |
+| 尺子显示 "px" 而不是 "cm"                       | 显示器 EDID 缺失，补一下或更新            |
